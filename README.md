@@ -39,3 +39,34 @@ Hệ thống sử dụng đầy đủ các ràng buộc để đảm bảo tính
   * `[CK_GiaBanMonAn] CHECK ([GiaBanMonAn] >= 0)`: Giá bán của món ăn không được phép là số âm.
   * `[CK_PhanTramGiamGia] CHECK ([PhanTramGiamGia] >= 0 AND [PhanTramGiamGia] <= 1)`: Tỉ lệ giảm giá phải nằm trong khoảng hợp lý từ 0% đến 100%.
   * `[CK_SoLuongMonAn] CHECK ([SoLuongMonAn] > 0)`: Khi khách gọi món, số lượng tối thiểu phải là 1.
+
+## ⚙️ Phần 2: Xử Lý Nghiệp Vụ bằng Hàm (User-Defined Functions - UDFs)
+
+Trong SQL Server, các hàm có sẵn (Built-in Functions như `SUM`, `COUNT`, `COALESCE`) giải quyết rất tốt các bài toán tính toán cơ bản. Tuy nhiên, hệ thống mặc định không thể hiểu được các "quy luật kinh doanh" (Business Logic) đặc thù của một nhà hàng. 
+
+Để giải quyết vấn đề này, dự án đã xây dựng hệ thống **Hàm tự định nghĩa (UDFs)**. Việc này giúp đóng gói các logic tính toán phức tạp thành các module độc lập, giúp tái sử dụng dễ dàng ở nhiều nơi (Báo cáo, Hóa đơn, Ứng dụng) mà không cần viết lại quy trình, đồng thời che giấu sự phức tạp của cơ sở dữ liệu bên dưới.
+
+Dự án áp dụng 3 cấp độ Function để xử lý 3 loại bài toán khác nhau:
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/bf8d8e0c-b794-40b2-9a3a-ff97fd623eca" />
+
+### 1. Scalar Function (Hàm Vô Hướng) - Xử lý tính toán đơn lẻ
+* **Tên hàm:** `fn_TinhTongTienHoaDon`
+* **Bài toán thực tế:** Khi khách hàng yêu cầu thanh toán, thu ngân cần biết chính xác tổng số tiền của hóa đơn đó là bao nhiêu.
+* **Cách giải quyết:** Hàm nhận đầu vào là một Mã Hóa Đơn. Nó sẽ tự động quét toàn bộ chi tiết món ăn mà khách đã gọi, nhân số lượng với **đơn giá tại thời điểm bán** (để tránh sai lệch nếu giá món ăn thay đổi trong tương lai), sau đó cộng dồn lại. Hàm cũng được thiết kế an toàn để trả về giá trị `0` nếu hóa đơn đó chưa có món nào, ngăn chặn triệt để lỗi hệ thống do giá trị `NULL`.
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/59961ed3-6985-4df2-a448-b5b0c2636b35" />
+
+### 2. Inline Table-Valued Function (ITVF) - Bộ lọc dữ liệu tốc độ cao
+* **Tên hàm:** `fn_TimMonAnTheoTaiChinh`
+* **Bài toán thực tế:** Nhân viên order thường xuyên nhận được yêu cầu từ khách: *"Cho anh xem các món Nướng có giá dưới 150.000đ"*.
+* **Cách giải quyết:** ITVF hoạt động như một "khung nhìn linh hoạt" (Parameterized View). Hàm nhận vào hai biến số: Loại món và Mức giá tối đa. Nó lập tức quét qua bảng Thực Đơn, loại bỏ các món đang tạm hết hàng và trả về một danh sách (bảng) các món ăn phù hợp. Điểm mạnh của ITVF là nó được SQL Server tối ưu hóa tốc độ truy xuất cực nhanh, rất phù hợp cho các tính năng tìm kiếm trên ứng dụng.
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/dfd4c923-48c9-4675-b532-59be9edeac39" />
+
+### 3. Multi-statement Table-Valued Function (MSTVF) - Thống kê và Xếp loại KPI
+* **Tên hàm:** `fn_DanhGiaHieuSuatBanAn`
+* **Bài toán thực tế:** Cuối mỗi tháng, người quản lý cần một báo cáo đánh giá xem vị trí bàn nào (ví dụ: Bàn VIP, Bàn Sân Vườn) mang lại doanh thu tốt nhất để có chiến lược sắp xếp khách hàng.
+* **Cách giải quyết:** Hàm này thực hiện một chuỗi xử lý phức tạp qua nhiều bước:
+  1. Tạo ra một bảng báo cáo ảo trong bộ nhớ.
+  2. Gom nhóm toàn bộ hóa đơn trong tháng/năm được chỉ định. Tái sử dụng lại hàm `fn_TinhTongTienHoaDon` (ở mục 1) để tính tổng doanh thu cho từng bàn.
+  3. Áp dụng quy tắc xếp loại tự động: Bàn có doanh thu trên 1.000.000đ được gắn mác "Năng Suất Cao", bàn có khách nhưng chưa đạt mức này là "Tiêu Chuẩn", và nhận diện cả những bàn "Không Có Khách".
+  4. Trả về bảng báo cáo KPI hoàn chỉnh.
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/f8acb41e-47e9-4770-9029-cc6a7793cdbc" />
