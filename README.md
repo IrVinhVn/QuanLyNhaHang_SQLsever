@@ -1,4 +1,4 @@
-## 🛠 Phân Tích Kỹ Thuật (Technical Details)
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/0f4170fd-3fe3-4ac1-8fd3-130e09620e57" />## 🛠 Phân Tích Kỹ Thuật (Technical Details)
 
 Dự án này được xây dựng tuân thủ nghiêm ngặt các tiêu chuẩn thiết kế cơ sở dữ liệu. Dưới đây là giải thích chi tiết cho từng bước triển khai:
 
@@ -70,3 +70,35 @@ Dự án áp dụng 3 cấp độ Function để xử lý 3 loại bài toán kh
   3. Áp dụng quy tắc xếp loại tự động: Bàn có doanh thu trên 1.000.000đ được gắn mác "Năng Suất Cao", bàn có khách nhưng chưa đạt mức này là "Tiêu Chuẩn", và nhận diện cả những bàn "Không Có Khách".
   4. Trả về bảng báo cáo KPI hoàn chỉnh.
 <img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/f8acb41e-47e9-4770-9029-cc6a7793cdbc" />
+
+## 🚀 Phần 3: Thủ Tục (Stored Procedure) & Tự Động Hóa (Trigger)
+
+Nếu như Hàm (Function) tập trung vào việc tính toán, thì **Stored Procedure (SP)** và **Trigger** chính là bộ não điều khiển toàn bộ hành động và sự tự động hóa của hệ thống. 
+
+### 1. Stored Procedure (Thủ tục lưu trữ) - Sức mạnh thực thi
+Trong SQL Server, các thủ tục hệ thống (như `sp_helptext` để xem mã nguồn hoặc `sp_spaceused` để kiểm tra dung lượng) giúp quản trị viên vận hành DB. Tuy nhiên, để giải quyết các bài toán kinh doanh thực tế, dự án đã xây dựng 3 SP tùy chỉnh nhằm bảo mật dữ liệu và tối ưu hiệu suất:
+
+* **SP 1: Kiểm tra điều kiện logic (`sp_ThemMonAnMoi`)**
+    * **Mục tiêu:** Đảm bảo tính toàn vẹn dữ liệu khi thêm món mới.
+    * **Logic xử lý:** Trước khi chạy lệnh `INSERT`, SP sẽ quét bảng Thực Đơn. Nếu tên món đã tồn tại, nó sẽ in ra cảnh báo và từ chối thêm. Điều này giúp loại bỏ rác dữ liệu ngay từ tầng Database.
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/1f8060c5-c383-4b24-a795-668ea62e6cb6" />
+
+* **SP 2: Sử dụng tham số OUTPUT (`sp_TinhTongChiTieuCuaBan`)**
+    * **Mục tiêu:** Tính toán và trả về tổng số tiền mà một bàn ăn cụ thể đã chi tiêu.
+    * **Logic xử lý:** SP nhận vào một `MaBanAn`, thực hiện phép tính tổng tiền từ các hóa đơn đã thanh toán của bàn đó, và "đẩy" kết quả ra ngoài thông qua tham số `OUTPUT`. Đây là cách tối ưu để ứng dụng phần mềm lấy dữ liệu báo cáo mà không cần viết lệnh truy vấn dài dòng.
+ <img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/211675f8-3a9a-4899-9adf-b8cc6be98967" />
+
+* **SP 3: Truy vấn đa bảng (Result Set) (`sp_InBillThanhToan`)**
+    * **Mục tiêu:** Đóng vai trò như một "máy in hóa đơn" hoàn chỉnh.
+    * **Logic xử lý:** Khi truyền vào một `MaHoaDon`, SP sẽ sử dụng lệnh `INNER JOIN` để kết nối đồng thời 4 bảng (`BanAn`, `HoaDon`, `ChiTietHoaDon`, `ThucDon`). Nó trả về một tập kết quả đầy đủ bao gồm: tên bàn, ngày giờ in, danh sách món ăn, đơn giá và thành tiền của từng món để hiển thị lên màn hình thanh toán.
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/9ce46f35-ff26-48d5-829d-31579819a92c" />
+
+### 2. Trigger (Bẫy sự kiện) - Tự động hóa hoàn toàn
+Trigger là phần "thông minh" nhất của dự án, giúp hệ thống tự vận hành mà không cần sự can thiệp của con người.
+
+* **Tên Trigger:** `trg_TuDongCapNhatTongTien`
+* **Cơ chế hoạt động:** Nằm "mai phục" tại bảng `[ChiTietHoaDon]`.
+* **Bài toán thực tế:** Trong nhà hàng, khi khách gọi thêm món hoặc hủy món, tổng tiền trên hóa đơn chính phải thay đổi ngay lập tức. Nếu làm thủ công sẽ rất dễ tính sai hoặc quên cập nhật.
+* **Giải pháp:** Bất cứ khi nào có hành động Thêm (Insert), Sửa (Update) hoặc Xóa (Delete) món ăn trong chi tiết, Trigger này sẽ tự động "thức dậy", nhẩm tính lại toàn bộ giá trị của hóa đơn đó dựa trên số lượng và đơn giá mới nhất, sau đó ghi đè con số tổng tiền vào bảng `[HoaDon]`.
+
+> **Điểm mạnh:** Nhờ có Trigger, dữ liệu giữa bảng "Hóa Đơn" và bảng "Chi Tiết Món Ăn" luôn luôn khớp nhau 100%, loại bỏ hoàn toàn các sai lệch tài chính trong quá trình vận hành quán.
