@@ -1,7 +1,7 @@
 ## 🛠 Phân Tích Kỹ Thuật (Technical Details)
 
 Dự án này được xây dựng tuân thủ nghiêm ngặt các tiêu chuẩn thiết kế cơ sở dữ liệu. Dưới đây là giải thích chi tiết cho từng bước triển khai:
-
+## ⚙️ Phần 1: Thiết kế và Khởi tạo Cấu trúc Dữ liệu
 ### 1. Khởi tạo Database và Cú pháp
 * **Tên Database:** Khởi tạo theo đúng định dạng `[Tên dự án]_[MaSV]`. Cụ thể ở đây là `[QuanLyNhaHang_K235480106100]`.
 
@@ -40,7 +40,7 @@ Hệ thống sử dụng đầy đủ các ràng buộc để đảm bảo tính
   * `[CK_PhanTramGiamGia] CHECK ([PhanTramGiamGia] >= 0 AND [PhanTramGiamGia] <= 1)`: Tỉ lệ giảm giá phải nằm trong khoảng hợp lý từ 0% đến 100%.
   * `[CK_SoLuongMonAn] CHECK ([SoLuongMonAn] > 0)`: Khi khách gọi món, số lượng tối thiểu phải là 1.
 
-## ⚙️ Phần 2: Xử Lý Nghiệp Vụ bằng Hàm (User-Defined Functions - UDFs)
+## ⚙️ Phần 2: Xây dựng Function
 
 Trong SQL Server, các hàm có sẵn (Built-in Functions như `SUM`, `COUNT`, `COALESCE`) giải quyết rất tốt các bài toán tính toán cơ bản. Tuy nhiên, hệ thống mặc định không thể hiểu được các "quy luật kinh doanh" (Business Logic) đặc thù của một nhà hàng. 
 
@@ -71,7 +71,7 @@ Dự án áp dụng 3 cấp độ Function để xử lý 3 loại bài toán kh
   4. Trả về bảng báo cáo KPI hoàn chỉnh.
 <img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/f8acb41e-47e9-4770-9029-cc6a7793cdbc" />
 
-## 🚀 Phần 3: Thủ Tục (Stored Procedure) & Tự Động Hóa (Trigger)
+## 🚀 Phần 3: Thủ Tục (Stored Procedure) 
 
 Nếu như Hàm (Function) tập trung vào việc tính toán, thì **Stored Procedure (SP)** và **Trigger** chính là bộ não điều khiển toàn bộ hành động và sự tự động hóa của hệ thống. 
 
